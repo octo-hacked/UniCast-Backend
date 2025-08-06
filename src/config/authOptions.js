@@ -65,7 +65,7 @@ export const authOptions = {
                         _id: new mongoose.Types.ObjectId(),
                         name: user.name,
                         email: user.email,
-                        image: user.image || profile?.picture || null,
+                        image: user.image || profile?.picture || user.picture,
                         provider: account?.provider || 'credentials',
                         isVerified: true, // OAuth users are considered verified
                         onboardingStatus: "not_started",
