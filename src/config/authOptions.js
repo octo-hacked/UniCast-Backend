@@ -4,9 +4,9 @@ import Credentials from '@auth/express/providers/credentials';
 import userModel from '../api/models/user.model.js';
 import { config } from './env.js';
 import bcrypt from 'bcrypt';
+import mongoose from 'mongoose';
 
 export const authOptions = {
-
     session: { strategy: 'jwt' },
     secret: config.auth.secret,
 
@@ -23,11 +23,12 @@ export const authOptions = {
                     throw new Error('Email and password required');
                 }
 
-                const user = await User.findOne({ email: credentials.email });
+                const user = await userModel.findOne({ email: credentials.email });
 
                 if (!user || !user.password) {
                     return null;
                 }
+                
                 const isValidPassword = await bcrypt.compare(
                     credentials.password,
                     user.password
@@ -56,7 +57,7 @@ export const authOptions = {
     ],
 
     callbacks: {
-        async jwt({ token, user }) {
+        async jwt({ token, user, account, profile }) {
             if (user) {
                 let dbUser = await userModel.findOne({ email: user.email });
                 if (!dbUser) {
@@ -65,19 +66,22 @@ export const authOptions = {
                         name: user.name,
                         email: user.email,
                         image: user.image || profile?.picture || null,
-                        provider: account.provider,
-                        isVerified: true, // or false, based on your logic
-                        onboardingStatus: "not_started", // default
+                        provider: account?.provider || 'credentials',
+                        isVerified: true, // OAuth users are considered verified
+                        onboardingStatus: "not_started",
                     });
                 }
                 if (dbUser) {
-                    token.id = dbUser._id.toString(); // Add MongoDB user ID to the token
-                    token.onboardingStatus = dbUser.onboardingStatus; // Add custom field
-                    token.isVerified = dbUser.isVerified; // Add another custom field
+                    token.id = dbUser._id.toString();
+                    token.onboardingStatus = dbUser.onboardingStatus;
+                    token.isVerified = dbUser.isVerified;
                 }
             }
             return token;
         },
+        async redirect({ url, baseUrl }) {
+      return "http://localhost:8080/dashboard"; // 👈 your frontend route
+    },
 
         async session({ session, token }) {
             if (token && session.user) {
